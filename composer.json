@@ -1,0 +1,13 @@
+{
+    "name": "scmrus/php-vault-env",
+    "description": "Secrets via Vault.",
+    "type": "library",
+    "require": {
+        "php": ">=5.4",
+        "ext-curl": "*"
+    },
+    "license": "MIT",
+    "autoload": {
+	"files": ["src/func.php"]
+    }
+}
