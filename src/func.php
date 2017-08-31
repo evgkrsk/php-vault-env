@@ -7,28 +7,36 @@ function secEnv($name)
 	{
 		$ch = curl_init();
 
-		curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Vault-Token: '.getenv('VAULT_TOKEN')]);
-		curl_setopt($ch, CURLOPT_URL, getenv('VAULT_ADDR').'/v1/secret/'.substr($value, 6));
+		$url     = (string) getenv('VAULT_ADDR').'/v1/secret/'.substr($value, 6);
+		$token   = (string) getenv('VAULT_TOKEN');
+		$timeout = (int) getenv('VAULT_TIMEOUT')>0 ? (int) getenv('VAULT_TIMEOUT') : 100;
+
+		curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Vault-Token: '.$token]);
+		curl_setopt($ch, CURLOPT_URL, $url);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
-		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, 100);
+		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, $timeout);
 
 		$res = curl_exec($ch);
 
 		if ($res === false)
 		{
 			error_log('secEnv(): curl_error: ' . curl_error($ch));
-		} 
+			$value = false;
+		}
 		else
 		{
 			$r = json_decode($res, true);
 
-			if (!isset($r['data']['value']))
+			if (isset($r['data']['value']))
+			{
+				$value = (string) $r['data']['value'];
+			}
+			else
 			{
 				error_log('secEnv(): no data. Vault response: ' . $res);
+				$value = false;
 			}
-
-			$value = empty($r['data']['value']) ? false : strval($r['data']['value']);
 		}
 
 		curl_close($ch);
