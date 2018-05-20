@@ -31,6 +31,7 @@ function secEnv($name)
 		$url     = (string) getenv('VAULT_ADDR');
 		$token   = (string) getenv('VAULT_TOKEN');
 		$timeout = (int) getenv('VAULT_TIMEOUT')>0 ? (int) getenv('VAULT_TIMEOUT') : 100;
+		$auth    = (string) getenv('VAULT_AUTH');
 
 		// https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod
 		$sa_token_file = '/var/run/secrets/kubernetes.io/serviceaccount/token';
@@ -55,7 +56,7 @@ function secEnv($name)
 		else
 		{
 			// https://www.vaultproject.io/docs/auth/kubernetes.html#authentication
-			if ($token === "auth/kubernetes") {
+			if ($auth === "kubernetes") {
 				// get token from cache or get new token using auth/kubernetes/login
 				if (isset($cache['_token']) && intval($cache['_token_expire']) > time())
 				{
