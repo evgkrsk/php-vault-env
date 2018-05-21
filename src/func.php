@@ -22,10 +22,15 @@
  */
 function secEnv($name)
 {
-	$value = getenv($name);
-	if (strpos($value, "VAULT:") === 0)
-	{
-		$value   = substr($value, 6);
+	$path = getenv($name);
+	if (strpos($path, "VAULT:") === 0) {
+		$path  = substr($path, 6);
+		$field = 'value';
+		$key   = $path;
+
+		if (strpos($path, '.')!==false) {
+			list($path, $field) = explode('.', $path, 2);
+		}
 
 		// vault params
 		$url     = (string) getenv('VAULT_ADDR');
@@ -50,8 +55,8 @@ function secEnv($name)
 		}
 
 		// check cache ttl
-		if ($cache_ttl > time() && array_key_exists($value, $cache)) {
-			$value = $cache[$value];
+		if ($cache_ttl > time() && array_key_exists($key, $cache)) {
+			$value = $cache[$key];
 		}
 		else
 		{
@@ -111,45 +116,53 @@ function secEnv($name)
 			// get secret from vault using vault token
 			$ch = curl_init();
 
-			curl_setopt($ch, CURLOPT_URL, $url.'/v1/secret/'.$value);
+			curl_setopt($ch, CURLOPT_URL, $url.'/v1/secret/'.$path);
 			curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Vault-Token: '.$token]);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
 			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, $timeout);
-			
+
 			$res = curl_exec($ch);
 			
 			if ($res === false)
 			{
 				error_log('secEnv(): curl_error: ' . curl_error($ch));
-				$value = array_key_exists($value, $cache) ? $cache[$value] : false;
+				$value = array_key_exists($key, $cache) ? $cache[$key] : false;
 			}
 			else
 			{
 				$r = json_decode($res, true);
 				
-				if (isset($r['data']['value']))
+				if (isset($r['data'][$field]))
 				{
+					$value = (string) $r['data'][$field];
+					
 					// update cache
-					if (!array_key_exists($value, $cache) || $cache[$value] != $r['data']['value'])
-					{
-						$cache[$value] = (string) $r['data']['value'];
+					$fSave = false;
+					foreach ($r['data'] as $k => $v) {
+						$k2 = $path.'.'.$k;
+						if (!array_key_exists($k2, $cache) || $cache[$k2] != $v) {
+							$cache[$k2] = (string) $v;
+							$fSave = true;
+						}
+					}
+					if ($fSave) {
 						file_put_contents($cache_file, json_encode($cache, JSON_UNESCAPED_UNICODE), LOCK_EX);
 					}
-
-					$value = (string) $r['data']['value'];
 				}
 				else
 				{
 					error_log('secEnv(): no data. Vault response: ' . $res);
 
 					// get secret from expired cache if we can't get it from vault now
-					$value = array_key_exists($value, $cache) ? $cache[$value] : false;
+					$value = array_key_exists($key, $cache) ? $cache[$key] : false;
 				}
 			}
 			
 			curl_close($ch);
 		}
+	} else {
+		$value = getenv($name);
 	}
 
 	return $value;
