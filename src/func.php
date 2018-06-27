@@ -28,14 +28,16 @@ function secEnv($name)
 		$field = 'value';
 		$key   = $path;
 
-		if (strpos($path, '.')!==false) {
+		if (strpos($path, '.')===false) {
+			$key = $path.'.'.$field;
+		} else {
 			list($path, $field) = explode('.', $path, 2);
 		}
 
 		// vault params
 		$url     = (string) getenv('VAULT_ADDR');
 		$token   = (string) getenv('VAULT_TOKEN');
-		$timeout = (int) getenv('VAULT_TIMEOUT')>0 ? (int) getenv('VAULT_TIMEOUT') : 100;
+		$timeout = (int) getenv('VAULT_TIMEOUT')>0 ? (int) getenv('VAULT_TIMEOUT') : 500;
 		$auth    = (string) getenv('VAULT_AUTH');
 
 		// https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod
@@ -50,8 +52,12 @@ function secEnv($name)
 		// load cache
 		if(file_exists($cache_file))
 		{
-			$cache = json_decode(file_get_contents($cache_file), true);
 			$cache_ttl+= filemtime($cache_file);
+			$cache = json_decode(file_get_contents($cache_file), true);
+			if (!is_array($cache)) {
+				error_log('secEnv(): cache file format error: '.json_last_error_msg());
+				$cache = [];
+			}
 		}
 
 		// check cache ttl
@@ -127,37 +133,26 @@ function secEnv($name)
 			if ($res === false)
 			{
 				error_log('secEnv(): curl_error: ' . curl_error($ch));
-				$value = array_key_exists($key, $cache) ? $cache[$key] : false;
 			}
 			else
 			{
 				$r = json_decode($res, true);
 				
-				if (isset($r['data'][$field]))
+				// update cache
+				if (isset($r['data']) && is_array($r['data']))
 				{
-					$value = (string) $r['data'][$field];
-					
-					// update cache
-					$fSave = false;
 					foreach ($r['data'] as $k => $v) {
-						$k2 = $path.'.'.$k;
-						if (!array_key_exists($k2, $cache) || $cache[$k2] != $v) {
-							$cache[$k2] = (string) $v;
-							$fSave = true;
-						}
+						$cache[$path.'.'.$k] = (string) $v;
 					}
-					if ($fSave) {
-						file_put_contents($cache_file, json_encode($cache, JSON_UNESCAPED_UNICODE), LOCK_EX);
-					}
+					file_put_contents($cache_file, json_encode($cache, JSON_UNESCAPED_UNICODE), LOCK_EX);
 				}
 				else
 				{
 					error_log('secEnv(): no data. Vault response: ' . $res);
-
-					// get secret from expired cache if we can't get it from vault now
-					$value = array_key_exists($key, $cache) ? $cache[$key] : false;
 				}
 			}
+			// get secret from expired cache even if we can't get it from vault now
+			$value = array_key_exists($key, $cache) ? $cache[$key] : false;
 			
 			curl_close($ch);
 		}
