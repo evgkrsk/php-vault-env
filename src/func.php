@@ -122,7 +122,7 @@ function secEnv($name)
 			// get secret from vault using vault token
 			$ch = curl_init();
 
-			curl_setopt($ch, CURLOPT_URL, $url.'/v1/secret/'.$path);
+			curl_setopt($ch, CURLOPT_URL, $url.'/v1/secret/data/'.$path);
 			curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Vault-Token: '.$token]);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
