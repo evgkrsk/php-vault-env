@@ -139,9 +139,9 @@ function secEnv($name)
 				$r = json_decode($res, true);
 				
 				// update cache
-				if (isset($r['data']) && is_array($r['data']))
+				if (isset($r['data']['data']) && is_array($r['data']['data']))
 				{
-					foreach ($r['data'] as $k => $v) {
+					foreach ($r['data']['data'] as $k => $v) {
 						$cache[$path.'.'.$k] = (string) $v;
 					}
 					file_put_contents($cache_file, json_encode($cache, JSON_UNESCAPED_UNICODE), LOCK_EX);
