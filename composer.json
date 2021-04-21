@@ -1,5 +1,5 @@
 {
-    "name": "scmrus/php-vault-env",
+    "name": "evgkrsk/php-vault-env",
     "description": "Secrets via Vault.",
     "type": "library",
     "require": {

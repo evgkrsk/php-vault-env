@@ -4,12 +4,12 @@ This library can be installed with composer:
 ```json
 {
   "require": {
-    "scmrus/php-vault-env": "dev-master"
+    "evgkrsk/php-vault-env": "master"
   },
   "repositories": [
     {
       "type": "vcs",
-      "url": "https://github.com/scmrus/php-vault-env"
+      "url": "https://github.com/evgkrsk/php-vault-env"
     }
   ]
 }
